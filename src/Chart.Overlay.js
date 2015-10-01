@@ -391,6 +391,25 @@
             Chart.types.Bar.prototype.drawDatasets.call(this, this.barDatasets, easingDecimal);
             Chart.types.Line.prototype.drawDatasets.call(this, this.lineDatasets, easingDecimal);
 
+          if (this.options.lineAtIndex && this.options.lineAtIndex.length) {
+            this.options.lineAtIndex.forEach(function(line){
+              var point = this.datasets[0].points[line.index];
+              var scale = this.scale;
+              this.chart.ctx.beginPath();
+              this.chart.ctx.strokeStyle = line.color || 'rgb(150,150,150)';
+              this.chart.ctx.moveTo(point.x, scale.startPoint + 24);
+              this.chart.ctx.lineWidth = line.lineWidth || 1;
+              this.chart.ctx.lineTo(point.x, scale.endPoint);
+              this.chart.ctx.stroke();
+              if (line.text){
+                this.chart.ctx.textAlign = 'center';
+                this.chart.ctx.fillStyle = this.chart.ctx.strokeStyle;
+                this.chart.ctx.fillText(line.text, point.x, scale.startPoint + 12);
+              }
+            }.bind(this));
+          }
+
+
         },
         showTooltip: function(ChartElements, forceRedraw) {
             // Only redraw the chart if we've actually changed what we're hovering on.

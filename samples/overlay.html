@@ -25,7 +25,7 @@
         labels: ["January aasdasd ", "Februarya asdasd ", "March asdas dasd", "April asdas dasd", "May asda da dasd", "Jun asdsad asd ae", "July asd asdasd asdasd a"],
         datasets: [ {
             label: "My Second dataset",
-            type: "bar",
+            type: "line",
             fillColor: "rgba(151,187,205,0.5)",
             strokeColor: "rgba(151,187,205,0.8)",
             highlightFill: "rgba(151,187,205,0.75)",
@@ -49,8 +49,8 @@
             datasetFill: false,
             labelLength: 1,
             scaleShowVerticalLines: false,
-            scaleShowHorizontalLines: false
-
+            scaleShowHorizontalLines: false,
+            lineAtIndex: [{index: 1, text: 'Closed'}, {index: 4, text: 'Hello'}]
         });
     }
     </script>
