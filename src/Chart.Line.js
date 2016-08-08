@@ -12,10 +12,6 @@
             return false;
         },
 
-        //Function - for display custom y labels takes in value, x position, y posiition, 
-        //canvas and index of label
-        customYLabel: null,
-
         ///Boolean - Whether grid lines are shown across the chart
         scaleShowGridLines: true,
 
@@ -65,8 +61,13 @@
         labelLength: 0,
 
         //String - A legend template
-        legendTemplate: "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>"
+        legendTemplate: "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>",
 
+        //Array - specific yAxis details
+        yAxes: [],
+
+        //Boolean - set default yAxis on the left of chart
+        scalePositionLeft: true,
     };
 
 
@@ -87,7 +88,7 @@
             });
 
             this.datasets = [];
-
+            this.yAxes = data.yAxes;
             //Set up tooltip events on the chart
             if (this.options.showTooltips) {
                 helpers.bindEvents(this, this.options.tooltipEvents, function(evt) {
@@ -137,7 +138,9 @@
                     pointColor: dataset.pointColor,
                     pointStrokeColor: dataset.pointStrokeColor,
                     showTooltip: dataset.showTooltip,
-                    points: []
+                    points: [],
+                    yAxesGroup: dataset.yAxesGroup,
+                    values: dataset.data
                 };
 
                 this.datasets.push(datasetObject);
@@ -156,33 +159,35 @@
                         strokeColor: dataset.pointStrokeColor,
                         fillColor: dataset.pointColor,
                         highlightFill: dataset.pointHighlightFill || dataset.pointColor,
-                        highlightStroke: dataset.pointHighlightStroke || dataset.pointStrokeColor
+                        highlightStroke: dataset.pointHighlightStroke || dataset.pointStrokeColor,
+                        yAxesGroup: dataset.yAxesGroup,
                     }));
                 }, this);
-
-                this.buildScale(data.labels);
-
-                if (this.scale.min < 0) {
-                    var basePercetage = (-1 * parseFloat(this.scale.min) /
-                        (this.scale.max - this.scale.min) * 1.00);
-                    var totalHeight = (this.scale.endPoint - this.scale.startPoint);
-                    var originFromEnd = basePercetage * totalHeight;
-                    var base = this.scale.endPoint - originFromEnd + this.options.scaleGridLineWidth;
-            
-
-                    this.PointClass.prototype.base = base;
-                } else {
-                    this.PointClass.prototype.base = this.scale.endPoint;
-                }
-                this.eachPoints(function(point, index) {
-                    helpers.extend(point, {
-                        x: this.scale.calculateX(index),
-                        y: point.base
-                    });
-                    point.save();
-                }, this);
-
             }, this);
+
+            this.buildScale(data.labels);
+
+            if (this.scale.min < 0) {
+                var basePercetage = (-1 * parseFloat(this.scale.min) /
+                    (this.scale.max - this.scale.min) * 1.00);
+                var totalHeight = (this.scale.endPoint - this.scale.startPoint);
+                var originFromEnd = basePercetage * totalHeight;
+                var base = this.scale.endPoint - originFromEnd + this.options.scaleGridLineWidth;
+
+
+                this.PointClass.prototype.base = base;
+            } else {
+                this.PointClass.prototype.base = this.scale.endPoint;
+            }
+            this.eachPoints(function(point, index) {
+                helpers.extend(point, {
+                    x: this.scale.calculateX(index),
+                    y: this.scale.endPoint
+                });
+                point.save();
+            }, this);
+
+
 
 
             this.render();
@@ -226,7 +231,6 @@
 
                 return values;
             };
-
             var scaleOptions = {
                 labelLength: this.options.labelLength,
                 templateString: this.options.scaleLabel,
@@ -241,17 +245,6 @@
                 valuesCount: labels.length,
                 beginAtZero: this.options.scaleBeginAtZero,
                 integersOnly: this.options.scaleIntegersOnly,
-                customYLabel: this.options.customYLabel,
-                calculateYRange: function(currentHeight) {
-                    var updatedRanges = helpers.calculateScaleRange(
-                        dataTotal(),
-                        currentHeight,
-                        this.fontSize,
-                        this.beginAtZero,
-                        this.integersOnly
-                    );
-                    helpers.extend(this, updatedRanges);
-                },
                 xLabels: labels,
                 font: helpers.fontString(this.options.scaleFontSize, this.options.scaleFontStyle, this.options.scaleFontFamily),
                 lineWidth: this.options.scaleLineWidth,
@@ -262,11 +255,14 @@
                 gridLineColor: (this.options.scaleShowGridLines) ? this.options.scaleGridLineColor : "rgba(0,0,0,0)",
                 padding: (this.options.showScale) ? 0 : this.options.pointDotRadius + this.options.pointDotStrokeWidth,
                 showLabels: this.options.scaleShowLabels,
-                display: this.options.showScale
+                display: this.options.showScale,
+                yAxes: this.yAxes,
+                positionLeft: this.options.scalePositionLeft,
+                datasets: this.datasets,
             };
-
             if (this.options.scaleOverride) {
                 helpers.extend(scaleOptions, {
+                    scaleOverride: this.options.scaleOverride,
                     calculateYRange: helpers.noop,
                     steps: this.options.scaleSteps,
                     stepValue: this.options.scaleStepWidth,
@@ -280,7 +276,6 @@
         },
         addData: function(valuesArray, label) {
             //Map the values array for each of the datasets
-
             helpers.each(valuesArray, function(value, datasetIndex) {
                 //Add a new point for each piece of data, passing any required data to draw.
                 this.datasets[datasetIndex].points.push(new this.PointClass({
@@ -289,7 +284,8 @@
                     x: this.scale.calculateX(this.scale.valuesCount + 1),
                     y: this.scale.base,
                     strokeColor: this.datasets[datasetIndex].pointStrokeColor,
-                    fillColor: this.datasets[datasetIndex].pointColor
+                    fillColor: this.datasets[datasetIndex].pointColor,
+                    yAxesGroup: this.datasets[datasetIndex].yAxesGroup
                 }));
             }, this);
 
@@ -337,7 +333,7 @@
 
                 helpers.each(dataset.points, function(point, index) {
                     point.transition({
-                        y: this.scale.calculateY(point.value),
+                        y: this.scale.calculateY(point),
                         x: this.scale.calculateX(index)
                     }, easingDecimal);
 
@@ -348,6 +344,7 @@
                 // This would cause issues when there is no animation, because the y of the next point would be 0, so beziers would be skewed
                 if (this.options.bezierCurve) {
                     helpers.each(dataset.points, function(point, index) {
+
                         //If we're at the start or end, we don't have a previous/next point
                         //By setting the tension to 0 here, the curve will transition to straight at the end
                         var nextPoint, previousPoint, thispoint;
@@ -377,8 +374,8 @@
                 var started = false;
 
                 helpers.each(dataset.points, function(point, index) {
-                    if (this.scale.min < 0) {
-                        helpers.noop();
+                    if (this.scale.getAxisMin(point) < 0) {
+                        point.base = this.scale.getAxisBase(point);
                     } else {
                         point.base = this.scale.endPoint;
                     }
